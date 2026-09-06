@@ -7,6 +7,7 @@ numpy<2.0.0
 
 # Feature Store
 hopsworks>=3.7.0
+deltalake
 
 # APIs & Web
 requests==2.31.0
