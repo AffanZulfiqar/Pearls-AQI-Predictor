@@ -27,6 +27,8 @@ jobs:
         env:
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
           HOPSWORKS_PROJECT_NAME: ${{ secrets.HOPSWORKS_PROJECT_NAME }}
+          AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
         run: python -m src.training_pipeline.run_training_pipeline
 
       - name: Upload Training Artifacts
