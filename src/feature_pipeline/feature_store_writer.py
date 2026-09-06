@@ -33,7 +33,8 @@ class FeatureStoreWriter:
             description="Hourly AQI and weather features for Islamabad, Karachi, Lahore",
             primary_key=["city_id", "timestamp"],
             event_time="timestamp",
-            online_enabled=True
+            online_enabled=True,
+            time_travel_format="HUDI"
         )
         return fg, True
 
