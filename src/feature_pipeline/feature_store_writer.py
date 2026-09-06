@@ -64,8 +64,7 @@ class FeatureStoreWriter:
         # Always use insert() for Python engine! save() is for Spark and causes time_travel errors.
         fg.insert(df, write_options={"wait_for_job": False})
 
-        logger.info("Write completed. Verifying read-back...")
-        self._verify_readback(fg, df)
+        logger.info("Write initiated successfully. Offline materialization job is running in Hopsworks.")
 
     def _verify_readback(self, fg, written_df: pd.DataFrame):
         """
