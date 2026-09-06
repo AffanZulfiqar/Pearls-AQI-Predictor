@@ -1,55 +1,11 @@
-// --- CITY DATA DICTIONARY (LIVE / ACCURATE HISTORICAL BENCHMARKS) ---
-const CITY_DATABASE = {
-    islamabad: {
-        name: "Islamabad",
-        country: "Pakistan",
-        aqi: 61,
-        status: "Moderate",
-        substatus: "Fair",
-        alertText: "<strong>MODERATE</strong> | Sensitive individuals should limit prolonged outdoor exertion.",
-        pollutants: { pm25: 61, pm10: 28, no2: 1.2, o3: 3.5 },
-        forecasts: {
-            "24h": "AQI 58 - Good",
-            "48h": "AQI 66 - Moderate",
-            "72h": "AQI 74 - Moderate"
-        },
-        // Realistically calibrated around Islamabad's 61 AQI (diurnal curve: 48 to 74)
-        hourly: [48, 50, 52, 55, 63, 71, 74, 72, 66, 61, 56, 52, 50, 49, 53, 58, 62, 66, 68, 65, 60, 56, 52, 49],
-        extended: [52, 55, 58, 60, 59, 63, 66, 68, 70, 72, 74, 73, 70, 67, 64]
-    },
-    karachi: {
-        name: "Karachi",
-        country: "Pakistan",
-        aqi: 142,
-        status: "Unhealthy for Sensitive",
-        substatus: "Poor",
-        alertText: "<strong>HIGH SMOG WARNING</strong> | Reduce prolonged or heavy outdoor exertion.",
-        pollutants: { pm25: 58, pm10: 92, no2: 38, o3: 42 },
-        forecasts: {
-            "24h": "AQI 135 - Sensitive",
-            "48h": "AQI 145 - Sensitive",
-            "72h": "AQI 152 - Unhealthy"
-        },
-        hourly: [115, 120, 125, 132, 140, 148, 155, 158, 152, 145, 138, 132, 130, 134, 140, 146, 150, 154, 156, 148, 142, 135, 128, 122],
-        extended: [125, 130, 135, 138, 142, 145, 148, 150, 152, 150, 146, 142, 138, 135, 130]
-    },
-    lahore: {
-        name: "Lahore",
-        country: "Pakistan",
-        aqi: 168,
-        status: "Unhealthy",
-        substatus: "Poor",
-        alertText: "<strong>SMOG WARNING (LAHORE)</strong> | Active unhealthy particulate smog; outdoor exertion strictly restricted.",
-        pollutants: { pm25: 88, pm10: 142, no2: 46, o3: 38 },
-        forecasts: {
-            "24h": "AQI 165 - Unhealthy",
-            "48h": "AQI 174 - Unhealthy",
-            "72h": "AQI 182 - Unhealthy"
-        },
-        hourly: [140, 144, 150, 158, 168, 178, 186, 182, 172, 165, 158, 152, 148, 150, 156, 164, 172, 180, 184, 176, 168, 160, 152, 145],
-        extended: [155, 160, 165, 168, 172, 175, 178, 180, 182, 185, 180, 175, 170, 165, 160]
-    }
-};
+// ============================================================
+// PEARLS AQI PREDICTOR — Live Dashboard
+// All data fetched from Flask API (URL injected by Streamlit).
+// CITY_DATABASE is not used for live data.
+// ============================================================
+
+// Resolved from window.__SERVER_DATA__.flask_api_url at runtime
+let FLASK_API_URL = "http://127.0.0.1:5000";
 
 let shapChartInstance = null;
 let trendChartInstance = null;
@@ -58,14 +14,8 @@ let extendedChartInstance = null;
 let diurnalChartInstance = null;
 let currentActiveMetric = "r2";
 
-// Server-side metrics or fallbacks
-let APP_METRICS = {
-    r2: 0.88,
-    mae_24h: 7.4,
-    mae_48h: 9.8,
-    mae_72h: 12.1,
-    rmse: 14.2
-};
+// Live metrics — populated from /metrics endpoint
+let APP_METRICS = {};
 
 // --- 1. CRISP, HIGH-DEFINITION SVG GAUGE UPDATE ---
 function drawGauge(aqiValue) {
@@ -104,8 +54,9 @@ function initShapChart() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     
-    const labels = ["PM2.5", "Wind Speed", "Humidity", "NO2", "Temperature"];
-    const dataVals = [0.893, 0.458, 0.305, 0.291, 0.087];
+    // Placeholder — real values loaded from /explain endpoint
+    const labels = ["Loading..."];
+    const dataVals = [0];
 
     const bgColors = [
         "rgba(245, 158, 11, 0.9)",
@@ -429,184 +380,256 @@ function initExtendedCharts() {
     }
 }
 
-// --- 6. ASYNC FETCH FROM FLASK API WITH FALLBACK ---
-async function fetchLivePredictions(cityKey) {
+// ── API helpers ────────────────────────────────────────────────────────────────
+
+async function apiFetch(path, timeoutMs = 8000) {
+    const url = `${FLASK_API_URL}${path}`;
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), timeoutMs);
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500);
-        const res = await fetch(`http://127.0.0.1:5000/predict?city=${cityKey}`, {
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-            return await res.json();
-        }
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(tid);
+        return res;
     } catch (e) {
-        // Fallback to cache
+        clearTimeout(tid);
+        throw e;
     }
-    return null;
 }
 
-async function fetchLiveExplain(cityKey) {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500);
-        const res = await fetch(`http://127.0.0.1:5000/explain?city=${cityKey}`, {
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-            return await res.json();
-        }
-    } catch (e) {
-        // Fallback
+function showApiError(message) {
+    const banner = document.getElementById("gaugeAlertBanner");
+    if (banner) {
+        const alertText = banner.querySelector(".alert-text");
+        if (alertText) alertText.innerHTML = `<strong>⚠ LIVE DATA UNAVAILABLE</strong> | ${message}`;
+        banner.style.display = "flex";
     }
-    return null;
+    // Show error in AQI display
+    const aqiVal = document.getElementById("currentAqiVal");
+    if (aqiVal) aqiVal.textContent = "--";
+    const aqiStatus = document.getElementById("currentAqiStatus");
+    if (aqiStatus) aqiStatus.textContent = "Unavailable";
+    const subStatus = document.getElementById("currentSubStatus");
+    if (subStatus) subStatus.textContent = "Flask API offline";
+    // Clear forecast cards
+    ["fc24Res","fc48Res","fc72Res"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = "Unavailable";
+    });
+    ["fcdVal24","fcdVal48","fcdVal72"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `-- <small>AQI</small>`;
+    });
+    // Update status tag
+    const activeTag = document.querySelector(".active-tag");
+    if (activeTag) {
+        activeTag.innerHTML = `<span class="pulse-dot" style="background:#ef4444;box-shadow:0 0 8px #ef4444"></span>API OFFLINE`;
+        activeTag.style.background = 'rgba(239,68,68,0.12)';
+        activeTag.style.borderColor = 'rgba(239,68,68,0.4)';
+        activeTag.style.color = '#f87171';
+    }
 }
 
-// --- 7. UPDATE DASHBOARD BY CITY ---
+// ── City name map ──────────────────────────────────────────────────────────────
+const CITY_NAMES = { islamabad: "Islamabad", karachi: "Karachi", lahore: "Lahore" };
+
+// ── Main dashboard update — ALL data from Flask API ───────────────────────────
 async function updateDashboard(cityKey) {
-    const city = CITY_DATABASE[cityKey] || CITY_DATABASE.islamabad;
+    const cityName = CITY_NAMES[cityKey] || cityKey;
+    let apiError = false;
 
-    const currentAqiVal = document.getElementById("currentAqiVal");
-    if (currentAqiVal) currentAqiVal.textContent = city.aqi;
-    const currentAqiStatus = document.getElementById("currentAqiStatus");
-    if (currentAqiStatus) currentAqiStatus.textContent = city.status;
-    const currentSubStatus = document.getElementById("currentSubStatus");
-    if (currentSubStatus) currentSubStatus.textContent = `Air Quality: ${city.substatus}`;
-    
-    const gaugeAlertBanner = document.getElementById("gaugeAlertBanner");
-    if (gaugeAlertBanner) {
-        const alertText = gaugeAlertBanner.querySelector(".alert-text");
-        if (alertText) alertText.innerHTML = city.alertText;
-    }
+    // ── 1. /current ──────────────────────────────────────────────────────────
+    try {
+        const res = await apiFetch(`/current?city=${cityKey}`);
+        if (res.ok) {
+            const d = await res.json();
+            const aqi = Math.round(d.aqi || 0);
 
-    const pm25Val = document.getElementById("pm25Val");
-    if (pm25Val) pm25Val.textContent = city.pollutants.pm25;
-    const pm10Val = document.getElementById("pm10Val");
-    if (pm10Val) pm10Val.textContent = city.pollutants.pm10;
-    const no2Val = document.getElementById("no2Val");
-    if (no2Val) no2Val.textContent = city.pollutants.no2;
-    const o3Val = document.getElementById("o3Val");
-    if (o3Val) o3Val.textContent = city.pollutants.o3;
+            const aqiVal = document.getElementById("currentAqiVal");
+            if (aqiVal) aqiVal.textContent = aqi;
+            const aqiStatus = document.getElementById("currentAqiStatus");
+            if (aqiStatus) aqiStatus.textContent = d.category || "";
+            const subStatus = document.getElementById("currentSubStatus");
+            if (subStatus) subStatus.textContent = `Air Quality: ${d.category || ""}`;
 
-    const fc24Res = document.getElementById("fc24Res");
-    if (fc24Res) fc24Res.textContent = city.forecasts["24h"];
-    const fc48Res = document.getElementById("fc48Res");
-    if (fc48Res) fc48Res.textContent = city.forecasts["48h"];
-    const fc72Res = document.getElementById("fc72Res");
-    if (fc72Res) fc72Res.textContent = city.forecasts["72h"];
+            // Pollutants
+            const pm25Val = document.getElementById("pm25Val");
+            if (pm25Val) pm25Val.textContent = d.pm25 ?? "--";
+            const pm10Val = document.getElementById("pm10Val");
+            if (pm10Val) pm10Val.textContent = d.pm10 ?? "--";
+            const no2Val = document.getElementById("no2Val");
+            if (no2Val) no2Val.textContent = d.no2 ?? "--";
+            const o3Val = document.getElementById("o3Val");
+            if (o3Val) o3Val.textContent = d.o3 ?? "--";
 
-    drawGauge(city.aqi);
+            drawGauge(aqi);
 
-    if (trendChartInstance) {
-        trendChartInstance.data.datasets[0].data = city.hourly;
-        const maxVal = Math.max(...city.hourly, 100);
-        const yMax = Math.max(Math.ceil((maxVal * 1.15) / 30) * 30, 120);
-        trendChartInstance.options.scales.y.max = yMax;
-        trendChartInstance.update();
-    }
+            // Alert banner
+            const banner = document.getElementById("gaugeAlertBanner");
+            if (banner) {
+                const alertText = banner.querySelector(".alert-text");
+                if (aqi > 150 && alertText) {
+                    alertText.innerHTML = `<strong>⚠ ${d.category?.toUpperCase()}</strong> | AQI ${aqi} — Limit outdoor exposure.`;
+                    banner.style.display = "flex";
+                } else if (banner) {
+                    banner.style.display = "none";
+                }
+            }
 
-    const fcdVal24 = document.getElementById("fcdVal24");
-    if (fcdVal24) {
-        fcdVal24.innerHTML = `${parseInt(city.forecasts["24h"].replace(/\D/g, '')) || 58} <small>AQI</small>`;
-        const fcdVal48 = document.getElementById("fcdVal48");
-        if (fcdVal48) fcdVal48.innerHTML = `${parseInt(city.forecasts["48h"].replace(/\D/g, '')) || 66} <small>AQI</small>`;
-        const fcdVal72 = document.getElementById("fcdVal72");
-        if (fcdVal72) fcdVal72.innerHTML = `${parseInt(city.forecasts["72h"].replace(/\D/g, '')) || 74} <small>AQI</small>`;
-    }
-    if (extendedChartInstance && city.extended) {
-        extendedChartInstance.data.datasets[0].data = city.extended;
-        extendedChartInstance.update();
-    }
-
-    const rTitle = document.getElementById("reportTitle");
-    if (rTitle) {
-        rTitle.textContent = `${city.name} Air Quality Assessment Bulletin`;
-        const rSummary = document.getElementById("reportSummary");
-        if (rSummary) {
-            rSummary.innerHTML = `The current Air Quality Index for ${city.name} stands at <strong>${city.aqi} AQI (${city.status})</strong>. The primary atmospheric driver is <strong>PM2.5 particulates (${city.pollutants.pm25} µg/m³)</strong>.`;
+            // Report section
+            const rTitle = document.getElementById("reportTitle");
+            if (rTitle) rTitle.textContent = `${cityName} Air Quality Assessment Bulletin`;
+            const rSummary = document.getElementById("reportSummary");
+            if (rSummary) {
+                rSummary.innerHTML = `The current Air Quality Index for <strong>${cityName}</strong> stands at <strong>${aqi} AQI (${d.category})</strong>. Primary pollutant: <strong>PM2.5 ${d.pm25} µg/m³</strong>.`;
+            }
+        } else if (res.status === 503) {
+            apiError = true;
+            showApiError("Hopsworks feature store unavailable");
+        } else {
+            apiError = true;
+            showApiError(`/current returned HTTP ${res.status}`);
         }
+    } catch (e) {
+        apiError = true;
+        showApiError("Flask API not reachable — start Flask with: python -m src.inference.api");
     }
 
-    // Render server-provided SHAP if present
-    if (city.shap && shapChartInstance) {
-        const top5 = city.shap.slice(0, 5);
-        shapChartInstance.data.labels = top5.map(e => (e.feature || e.name || "").toUpperCase());
-        shapChartInstance.data.datasets[0].data = top5.map(e => Math.abs(e.importance || e.value || 0));
-        shapChartInstance.update();
-    }
+    if (apiError) return;
 
-    // Optional: attempt local Flask API update if user runs it locally
-    const livePred = await fetchLivePredictions(cityKey);
-    if (livePred && livePred.forecasts) {
-        const fc = livePred.forecasts;
-        if (fc["24h"] && fc24Res) fc24Res.textContent = `AQI ${Math.round(fc["24h"].value)} - ${fc["24h"].category}`;
-        if (fc["48h"] && fc48Res) fc48Res.textContent = `AQI ${Math.round(fc["48h"].value)} - ${fc["48h"].category}`;
-        if (fc["72h"] && fc72Res) fc72Res.textContent = `AQI ${Math.round(fc["72h"].value)} - ${fc["72h"].category}`;
-        
-        if (fcdVal24 && fc["24h"]) fcdVal24.innerHTML = `${Math.round(fc["24h"].value)} <small>AQI</small>`;
-        const fcdVal48 = document.getElementById("fcdVal48");
-        if (fcdVal48 && fc["48h"]) fcdVal48.innerHTML = `${Math.round(fc["48h"].value)} <small>AQI</small>`;
-        const fcdVal72 = document.getElementById("fcdVal72");
-        if (fcdVal72 && fc["72h"]) fcdVal72.innerHTML = `${Math.round(fc["72h"].value)} <small>AQI</small>`;
-        
-        const activeTag = document.querySelector(".active-tag");
-        if (activeTag) {
-            activeTag.innerHTML = `<span class="pulse-dot"></span>LIVE FLASK INFERENCE`;
-            activeTag.style.background = 'rgba(16, 185, 129, 0.14)';
-            activeTag.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-            activeTag.style.color = '#34d399';
-        }
-    }
+    // ── 2. /predict ──────────────────────────────────────────────────────────
+    try {
+        const res = await apiFetch(`/predict?city=${cityKey}`);
+        if (res.ok) {
+            const d = await res.json();
+            const fc = d.forecasts || {};
 
-    const liveExp = await fetchLiveExplain(cityKey);
-    if (liveExp && liveExp.explanations && liveExp.explanations["24h"] && shapChartInstance) {
-        const top5 = liveExp.explanations["24h"].slice(0, 5);
-        shapChartInstance.data.labels = top5.map(e => e.feature.toUpperCase());
-        shapChartInstance.data.datasets[0].data = top5.map(e => Math.abs(e.importance));
-        shapChartInstance.update();
-    }
-}
+            const fc24Res = document.getElementById("fc24Res");
+            const fc48Res = document.getElementById("fc48Res");
+            const fc72Res = document.getElementById("fc72Res");
+            if (fc["24h"] && fc24Res) fc24Res.textContent = `AQI ${Math.round(fc["24h"].value)} - ${fc["24h"].category}`;
+            if (fc["48h"] && fc48Res) fc48Res.textContent = `AQI ${Math.round(fc["48h"].value)} - ${fc["48h"].category}`;
+            if (fc["72h"] && fc72Res) fc72Res.textContent = `AQI ${Math.round(fc["72h"].value)} - ${fc["72h"].category}`;
 
-// --- BOOTSTRAP INITIALIZATION ---
-window.addEventListener("DOMContentLoaded", () => {
-    // 1. Ingest server-side live data from Streamlit Python if present
-    if (window.__SERVER_DATA__ && window.__SERVER_DATA__.cities) {
-        for (const [key, val] of Object.entries(window.__SERVER_DATA__.cities)) {
-            CITY_DATABASE[key] = val;
-        }
+            const fcdVal24 = document.getElementById("fcdVal24");
+            const fcdVal48 = document.getElementById("fcdVal48");
+            const fcdVal72 = document.getElementById("fcdVal72");
+            if (fcdVal24 && fc["24h"]) fcdVal24.innerHTML = `${Math.round(fc["24h"].value)} <small>AQI</small>`;
+            if (fcdVal48 && fc["48h"]) fcdVal48.innerHTML = `${Math.round(fc["48h"].value)} <small>AQI</small>`;
+            if (fcdVal72 && fc["72h"]) fcdVal72.innerHTML = `${Math.round(fc["72h"].value)} <small>AQI</small>`;
 
-        const activeTag = document.querySelector(".active-tag");
-        if (activeTag) {
-            if (window.__SERVER_DATA__.is_live) {
-                activeTag.innerHTML = `<span class="pulse-dot"></span>LIVE FEATURE STORE`;
-                activeTag.style.background = 'rgba(16, 185, 129, 0.14)';
-                activeTag.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            // Status tag
+            const activeTag = document.querySelector(".active-tag");
+            if (activeTag) {
+                activeTag.innerHTML = `<span class="pulse-dot"></span>LIVE HOPSWORKS INFERENCE`;
+                activeTag.style.background = 'rgba(16,185,129,0.14)';
+                activeTag.style.borderColor = 'rgba(16,185,129,0.4)';
                 activeTag.style.color = '#34d399';
-            } else {
-                activeTag.innerHTML = `<span class="pulse-dot" style="background:#f59e0b; box-shadow:0 0 8px #f59e0b;"></span>OFFLINE BENCHMARK`;
-                activeTag.style.background = 'rgba(245, 158, 11, 0.12)';
-                activeTag.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-                activeTag.style.color = '#fbbf24';
+            }
+        } else if (res.status === 503) {
+            ["fc24Res","fc48Res","fc72Res"].forEach(id => {
+                const el = document.getElementById(id); if (el) el.textContent = "Model unavailable";
+            });
+        }
+    } catch (e) { /* Non-critical: current AQI is already displayed */ }
+
+    // ── 3. /history (7-day chart) ─────────────────────────────────────────────
+    try {
+        const res = await apiFetch(`/history?city=${cityKey}&hours=168`);
+        if (res.ok) {
+            const d = await res.json();
+            const points = (d.history || []).map(r => Math.round(r.aqi));
+            if (trendChartInstance && points.length > 0) {
+                // Show up to 24 most recent for the hourly chart
+                const recent = points.slice(-24);
+                trendChartInstance.data.labels = Array.from({length: recent.length}, (_, i) => `${i+1}h`);
+                trendChartInstance.data.datasets[0].data = recent;
+                const maxVal = Math.max(...recent, 100);
+                trendChartInstance.options.scales.y.max = Math.max(Math.ceil(maxVal * 1.15 / 30) * 30, 120);
+                trendChartInstance.update();
+            }
+            if (extendedChartInstance && points.length > 0) {
+                extendedChartInstance.data.datasets[0].data = points.slice(-15);
+                extendedChartInstance.update();
             }
         }
-        
-        // Ingest metrics if available
-        if (window.__SERVER_DATA__.metrics && Object.keys(window.__SERVER_DATA__.metrics).length > 0) {
-            const m = window.__SERVER_DATA__.metrics;
-            if (m.r2) APP_METRICS.r2 = m.r2;
-            if (m.mae_24h) APP_METRICS.mae_24h = m.mae_24h;
-            if (m.mae_48h) APP_METRICS.mae_48h = m.mae_48h;
-            if (m.mae_72h) APP_METRICS.mae_72h = m.mae_72h;
-            if (m.rmse) APP_METRICS.rmse = m.rmse;
+    } catch (e) { /* Chart stays at placeholder */ }
+
+    // ── 4. /explain (SHAP chart) ──────────────────────────────────────────────
+    try {
+        const res = await apiFetch(`/explain?city=${cityKey}`, 15000);
+        if (res.ok) {
+            const d = await res.json();
+            const exp24 = (d.explanations || {})["24h"] || [];
+            if (exp24.length > 0 && shapChartInstance) {
+                const top5 = exp24.slice(0, 5);
+                shapChartInstance.data.labels = top5.map(e => e.feature.toUpperCase());
+                shapChartInstance.data.datasets[0].data = top5.map(e => +Math.abs(e.importance).toFixed(3));
+                shapChartInstance.options.scales.x.max = undefined; // auto-scale to real values
+                shapChartInstance.update();
+            } else if (shapChartInstance) {
+                shapChartInstance.data.labels = ["Explanation unavailable"];
+                shapChartInstance.data.datasets[0].data = [0];
+                shapChartInstance.update();
+            }
+        }
+    } catch (e) {
+        if (shapChartInstance) {
+            shapChartInstance.data.labels = ["Explanation unavailable"];
+            shapChartInstance.data.datasets[0].data = [0];
+            shapChartInstance.update();
         }
     }
 
-    const defaultCity = CITY_DATABASE.islamabad;
-    drawGauge(defaultCity.aqi);
+    // ── 5. /metrics ───────────────────────────────────────────────────────────
+    try {
+        const res = await apiFetch(`/metrics`);
+        if (res.ok) {
+            const d = await res.json();
+            const m = d.metrics || {};
+            // Flatten for APP_METRICS: take 24h ridge/random_forest/tensorflow_nn best values
+            let best = { rmse: 999, mae: 999, r2: -1 };
+            for (const horizon of ["24h","48h","72h"]) {
+                const hm = m[horizon] || {};
+                for (const [, metrics] of Object.entries(hm)) {
+                    if ((metrics.rmse || 999) < best.rmse) {
+                        best = { rmse: metrics.rmse, mae: metrics.mae, r2: metrics.r2 };
+                    }
+                }
+            }
+            APP_METRICS = {
+                r2: best.r2 || 0,
+                mae_24h: (m["24h"] ? Object.values(m["24h"])[0]?.mae : 0) || 0,
+                mae_48h: (m["48h"] ? Object.values(m["48h"])[0]?.mae : 0) || 0,
+                mae_72h: (m["72h"] ? Object.values(m["72h"])[0]?.mae : 0) || 0,
+                rmse: best.rmse || 0,
+            };
+            renderPerformanceChart(currentActiveMetric);
+
+            // Show data source badge if synthetic
+            const srcs = d.data_sources || {};
+            const hasSynthetic = Object.values(srcs).some(s => s === "synthetic" || s === "mixed");
+            if (hasSynthetic) {
+                const badge = document.getElementById("dataSourceBadge");
+                if (badge) {
+                    badge.textContent = "Trained on bootstrap data (real + calibrated synthetic)";
+                    badge.style.display = "inline-block";
+                }
+            }
+        }
+    } catch (e) { /* Metrics chart stays hidden */ }
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+window.addEventListener("DOMContentLoaded", () => {
+    // Read Flask API URL injected by Streamlit — never hardcoded
+    if (window.__SERVER_DATA__ && window.__SERVER_DATA__.flask_api_url) {
+        FLASK_API_URL = window.__SERVER_DATA__.flask_api_url.replace(/\/$/, "");
+    }
+
+    // Initial placeholder state before API responds
+    drawGauge(0);
     initShapChart();
-    initTrendChart(defaultCity.hourly);
+    initTrendChart([]);
     renderPerformanceChart("r2");
     updateDashboard("islamabad");
 
