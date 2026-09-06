@@ -66,15 +66,13 @@ class ModelRegistryWriter:
         if shap_path and os.path.exists(shap_path):
             shutil.copy(shap_path, f"{model_dir}/shap_summary.png")
 
-        # 4. Build full metadata for Hopsworks
-        full_metrics = {
-            **metrics,
-            "model_type":             model_type,
-            "training_date":          datetime.now(timezone.utc).isoformat(),
-            "feature_schema_version": settings.DATA_SOURCE_VERSION,
-            "forecast_horizon":       horizon,
-            "data_source":            data_source,
-            "feature_count":          str(len(feature_cols)),
+        # 4. Hopsworks 'metrics' argument strictly accepts ONLY numbers (float/int).
+        # We must ensure no strings are passed here to avoid Avro/Hopsworks ValueError.
+        numeric_metrics = {
+            "rmse": float(metrics.get("rmse", 0)),
+            "mae":  float(metrics.get("mae", 0)),
+            "r2":   float(metrics.get("r2", 0)),
+            "feature_count": float(len(feature_cols))
         }
 
         if data_source in ("synthetic", "mixed"):
@@ -90,11 +88,12 @@ class ModelRegistryWriter:
 
         hw_model = self.mr.python.create_model(
             name=model_name,
-            metrics=full_metrics,
+            metrics=numeric_metrics,
             description=(
                 f"{model_type} model for {horizon} AQI forecast | "
                 f"data_source={data_source} | "
-                f"trained {datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+                f"schema_v={settings.DATA_SOURCE_VERSION} | "
+                f"trained {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
             )
         )
         hw_model.save(model_dir)
