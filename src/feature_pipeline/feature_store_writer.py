@@ -30,7 +30,8 @@ class FeatureStoreWriter:
                 description="AQI and weather features",
                 primary_key=["city_id", "timestamp"],
                 event_time="timestamp",
-                online_enabled=True # Needed for inference
+                online_enabled=True, # Needed for inference
+                time_travel_format="NONE"
             )
             return fg, True
 
