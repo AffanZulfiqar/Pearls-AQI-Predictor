@@ -76,10 +76,6 @@ def get_dashboard_payload():
 
     # 1. Attempt connection to Hopsworks Feature Store
     full_df = None
-    import streamlit as st
-    if not settings.HOPSWORKS_API_KEY or not settings.HOPSWORKS_PROJECT_NAME:
-        st.error(f"Keys are MISSING! API_KEY: {bool(settings.HOPSWORKS_API_KEY)}, PROJECT_NAME: {bool(settings.HOPSWORKS_PROJECT_NAME)}")
-        
     if settings.HOPSWORKS_API_KEY and settings.HOPSWORKS_PROJECT_NAME:
         try:
             import hopsworks
