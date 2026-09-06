@@ -17,6 +17,14 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.sort_values(by=["city_id", "timestamp"]).copy()
 
+    # Ensure timestamp is datetime (timezone-naive UTC)
+    if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit='ms', errors='coerce').fillna(
+            pd.to_datetime(df["timestamp"], errors='coerce')
+        )
+    if df["timestamp"].dt.tz is not None:
+        df["timestamp"] = df["timestamp"].dt.tz_convert("UTC").dt.tz_localize(None)
+
     # --- Time-based features ---
     df["hour"] = df["timestamp"].dt.hour
     df["day_of_week"] = df["timestamp"].dt.dayofweek
