@@ -21,7 +21,7 @@ def main():
         fs_writer = FeatureStoreWriter()
     except Exception as e:
         logger.error(f"Failed to initialize clients: {e}")
-        return
+        raise e
 
     current_time = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
 

@@ -80,6 +80,7 @@ def get_dashboard_payload():
         try:
             import hopsworks
             project = hopsworks.login(
+                host="app.hopsworks.ai",
                 project=settings.HOPSWORKS_PROJECT_NAME,
                 api_key_value=settings.HOPSWORKS_API_KEY
             )
