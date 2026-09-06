@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pearls AQI Predictor | Enterprise Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-wrapper">
+        <!-- TOP NAVIGATION BAR -->
+        <header class="top-nav">
+            <div class="nav-left">
+                <div class="brand-logo">
+                    <div class="pearl-sphere"></div>
+                    <div class="brand-text">
+                        <span class="brand-title">PEARLS</span>
+                        <span class="brand-sub">AQI PREDICTOR</span>
+                    </div>
+                </div>
+                <div class="location-picker">
+                    <span class="pin-icon">📍</span>
+                    <select id="citySelect" class="city-dropdown">
+                        <option value="islamabad" selected>ISLAMABAD | PAKISTAN</option>
+                        <option value="karachi">KARACHI | PAKISTAN</option>
+                        <option value="lahore">LAHORE | PAKISTAN</option>
+                    </select>
+                </div>
+                <div class="status-pill">
+                    <span class="status-label">FEED:</span>
+                    <span class="active-tag"><span class="pulse-dot"></span>LIVE TELEMETRY</span>
+                </div>
+            </div>
+
+            <!-- FUNCTIONAL NAVIGATION TABS -->
+            <nav class="nav-center">
+                <button class="nav-tab active" data-tab="overview">Overview</button>
+                <button class="nav-tab" data-tab="forecasts">Forecasts</button>
+                <button class="nav-tab" data-tab="analyses">Analyses</button>
+                <button class="nav-tab" data-tab="reports">Reports</button>
+                <button class="nav-tab" data-tab="settings">Settings</button>
+            </nav>
+
+            <div class="nav-right">
+                <div class="telemetry-badge">
+                    <span class="refresh-indicator">●</span>
+                    <span id="lastUpdatedText">Synced: Just now</span>
+                </div>
+                <button id="refreshBtn" class="action-btn" title="Refresh Live Readings">
+                    🔄 Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- TAB 1: OVERVIEW (MAIN EXECUTIVE VIEW) -->
+        <main id="tab-overview" class="tab-pane active">
+            <div class="dashboard-grid">
+                <!-- 1. GAUGE CARD (HIGH-PRECISION CRISP SVG GAUGE) -->
+                <section class="card gauge-card">
+                    <div class="gauge-container">
+                        <svg id="svgGauge" viewBox="0 0 280 185" class="gauge-svg">
+                            <defs>
+                                <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#10b981" />
+                                    <stop offset="50%" stop-color="#f59e0b" />
+                                    <stop offset="100%" stop-color="#ef4444" />
+                                </linearGradient>
+                                <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#f59e0b" flood-opacity="0.6" />
+                                </filter>
+                            </defs>
+
+                            <!-- Outer Track (240-degree open horseshoe) -->
+                            <circle cx="140" cy="105" r="82" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12"
+                                stroke-dasharray="343.48 515.22" stroke-dashoffset="0" stroke-linecap="round"
+                                transform="rotate(150 140 105)" />
+
+                            <!-- Active Progress Arc -->
+                            <circle id="gaugeProgressArc" cx="140" cy="105" r="82" fill="none" stroke="url(#gaugeGrad)" stroke-width="12"
+                                stroke-dasharray="104.7 515.22" stroke-dashoffset="0" stroke-linecap="round" filter="url(#glowFilter)"
+                                transform="rotate(150 140 105)" />
+
+                            <!-- Centered Clean Typography -->
+                            <text x="140" y="78" text-anchor="middle" class="gauge-svg-sub">AIR QUALITY INDEX</text>
+                            <text x="140" y="126" text-anchor="middle" class="gauge-svg-val" id="currentAqiVal">61</text>
+                        </svg>
+                    </div>
+
+                    <!-- Glowing Status Pill & Substatus (Zero Overlap & Fills Card Evenly) -->
+                    <div class="gauge-status-wrap">
+                        <span class="gauge-pill-badge badge-moderate" id="currentAqiStatus">Moderate</span>
+                        <span class="gauge-substatus" id="currentSubStatus">Air Quality: Fair</span>
+                    </div>
+
+                    <div class="gauge-alert" id="gaugeAlertBanner">
+                        <span class="alert-icon">⚠️</span>
+                        <span class="alert-text"><strong>MODERATE</strong> | Sensitive individuals should limit outdoor activity.</span>
+                    </div>
+                </section>
+
+                <!-- 2. POLLUTANT 2x2 GRID -->
+                <section class="card pollutants-card">
+                    <div class="pollutant-grid">
+                        <div class="pollutant-tile" id="tilePm25">
+                            <div class="tile-header">
+                                <span class="tile-title">PM2.5</span>
+                                <span class="pill-badge pill-good" id="pm25Badge">Good</span>
+                            </div>
+                            <div class="tile-value-wrap">
+                                <span class="tile-num" id="pm25Val">61</span>
+                                <span class="tile-unit">µg/m³</span>
+                            </div>
+                            <div class="sparkline-wrap">
+                                <svg class="sparkline" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                    <path id="sparkPm25" d="M0,18 Q15,10 30,16 T60,8 T85,12 T100,6" fill="none" stroke="#eab308" stroke-width="2.4" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="pollutant-tile" id="tilePm10">
+                            <div class="tile-header">
+                                <span class="tile-title">PM10</span>
+                                <span class="pill-badge pill-good" id="pm10Badge">Good</span>
+                            </div>
+                            <div class="tile-value-wrap">
+                                <span class="tile-num" id="pm10Val">28</span>
+                                <span class="tile-unit">µg/m³</span>
+                            </div>
+                            <div class="sparkline-wrap">
+                                <svg class="sparkline" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                    <path id="sparkPm10" d="M0,15 Q20,20 40,12 T70,18 T90,8 T100,14" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="pollutant-tile" id="tileNo2">
+                            <div class="tile-header">
+                                <span class="tile-title">NO2</span>
+                                <span class="pill-badge pill-good" id="no2Badge">Good</span>
+                            </div>
+                            <div class="tile-value-wrap">
+                                <span class="tile-num" id="no2Val">1.2</span>
+                                <span class="tile-unit">ppb</span>
+                            </div>
+                            <div class="sparkline-wrap">
+                                <svg class="sparkline" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                    <path id="sparkNo2" d="M0,16 Q25,8 50,14 T75,10 T100,15" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="pollutant-tile" id="tileO3">
+                            <div class="tile-header">
+                                <span class="tile-title">O3</span>
+                                <span class="pill-badge pill-good" id="o3Badge">Good</span>
+                            </div>
+                            <div class="tile-value-wrap">
+                                <span class="tile-num" id="o3Val">3.5</span>
+                                <span class="tile-unit">ppb</span>
+                            </div>
+                            <div class="sparkline-wrap">
+                                <svg class="sparkline" viewBox="0 0 100 24" preserveAspectRatio="none">
+                                    <path id="sparkO3" d="M0,19 Q20,12 40,16 T70,6 T90,14 T100,9" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. SHAP FEATURE IMPORTANCE (EXPANDED WIDTH, ZERO CONGESTION) -->
+                <section class="card shap-card">
+                    <div class="card-head">
+                        <h3 class="card-title">SHAP Feature Importance</h3>
+                        <p class="card-subtitle">Feature Contribution (SHAP Value)</p>
+                    </div>
+                    <div class="shap-chart-wrap">
+                        <canvas id="shapChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- 4. FORECAST HORIZONS -->
+                <section class="forecast-stack">
+                    <div class="forecast-box fc-24">
+                        <span class="fc-tag">24h Forecast</span>
+                        <span class="fc-res" id="fc24Res">AQI 58 - Good</span>
+                    </div>
+                    <div class="forecast-box fc-48">
+                        <span class="fc-tag">48h Forecast</span>
+                        <span class="fc-res" id="fc48Res">AQI 66 - Moderate</span>
+                    </div>
+                    <div class="forecast-box fc-72">
+                        <span class="fc-tag">72h Forecast</span>
+                        <span class="fc-res" id="fc72Res">AQI 74 - Moderate</span>
+                    </div>
+                </section>
+
+                <!-- 5. HOURLY TREND WITH REALISTIC VALUES -->
+                <section class="card trend-card">
+                    <div class="trend-head">
+                        <h3 class="card-title">Hourly AQI Trend & Prediction</h3>
+                        <div class="epa-gradient-legend">
+                            <span class="legend-badge">EPA color coded gradient</span>
+                            <div class="legend-items">
+                                <span class="leg-item"><span class="leg-dot dot-green"></span>0–50</span>
+                                <span class="leg-item"><span class="leg-dot dot-yellow"></span>51–100</span>
+                                <span class="leg-item"><span class="leg-dot dot-orange"></span>101–150</span>
+                                <span class="leg-item"><span class="leg-dot dot-red"></span>151–200+</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="trend-chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- 6. SPACIOUS MODEL PERFORMANCE WITH CLICKABLE METRICS -->
+                <section class="card performance-card">
+                    <div class="card-head">
+                        <div class="perf-title-row">
+                            <div>
+                                <h3 class="card-title">Model Performance</h3>
+                                <p class="card-subtitle" id="perfSubTitle">Predicted AQI vs Actual (Parity Fit • R² = 0.88)</p>
+                            </div>
+                            <span class="perf-tag" id="activeModelTag">Random Forest</span>
+                        </div>
+                    </div>
+                    <div class="perf-body">
+                        <div class="perf-chart-wrap">
+                            <canvas id="perfDynamicChart"></canvas>
+                        </div>
+                        <div class="perf-metrics">
+                            <button class="metric-tab active" data-metric="r2" title="Click to view Parity Scatter">
+                                <span class="m-label">R² Fit:</span>
+                                <span class="m-val">0.88</span>
+                            </button>
+                            <button class="metric-tab" data-metric="mae" title="Click to view Mean Absolute Error Distribution">
+                                <span class="m-label">MAE:</span>
+                                <span class="m-val">9.8</span>
+                            </button>
+                            <button class="metric-tab" data-metric="rmse" title="Click to view Residuals Variance">
+                                <span class="m-label">RMSE:</span>
+                                <span class="m-val">14.2</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- TAB 2: FORECASTS DEEP DIVE -->
+        <main id="tab-forecasts" class="tab-pane">
+            <div class="tab-inner">
+                <div class="section-title-wrap">
+                    <h2>72-Hour Atmospheric & Meteorological Forecast</h2>
+                    <p>Machine learning projection incorporating forward lag-window features and OpenWeather atmospheric covariates.</p>
+                </div>
+                <div class="forecast-grid-cards">
+                    <div class="fc-detail-card" id="cardFc24">
+                        <div class="fcd-head">
+                            <span class="fcd-horizon">24 Hours (Tomorrow)</span>
+                            <span class="fcd-badge badge-good">Good Quality</span>
+                        </div>
+                        <div class="fcd-val" id="fcdVal24">58 <small>AQI</small></div>
+                        <div class="fcd-metrics">
+                            <div class="fcd-row"><span>Dominant Factor:</span><strong>PM2.5 Dispersion</strong></div>
+                            <div class="fcd-row"><span>Confidence Interval:</span><strong>92% (±4 AQI)</strong></div>
+                            <div class="fcd-row"><span>Peak Smog Window:</span><strong>07:00 – 09:00 UTC</strong></div>
+                        </div>
+                    </div>
+                    <div class="fc-detail-card" id="cardFc48">
+                        <div class="fcd-head">
+                            <span class="fcd-horizon">48 Hours (Day 2)</span>
+                            <span class="fcd-badge badge-moderate">Moderate</span>
+                        </div>
+                        <div class="fcd-val" id="fcdVal48">66 <small>AQI</small></div>
+                        <div class="fcd-metrics">
+                            <div class="fcd-row"><span>Dominant Factor:</span><strong>Low Wind Inversion</strong></div>
+                            <div class="fcd-row"><span>Confidence Interval:</span><strong>87% (±7 AQI)</strong></div>
+                            <div class="fcd-row"><span>Peak Smog Window:</span><strong>18:00 – 21:00 UTC</strong></div>
+                        </div>
+                    </div>
+                    <div class="fc-detail-card" id="cardFc72">
+                        <div class="fcd-head">
+                            <span class="fcd-horizon">72 Hours (Day 3)</span>
+                            <span class="fcd-badge badge-moderate">Moderate</span>
+                        </div>
+                        <div class="fcd-val" id="fcdVal72">74 <small>AQI</small></div>
+                        <div class="fcd-metrics">
+                            <div class="fcd-row"><span>Dominant Factor:</span><strong>Aerosol Growth</strong></div>
+                            <div class="fcd-row"><span>Confidence Interval:</span><strong>81% (±10 AQI)</strong></div>
+                            <div class="fcd-row"><span>Peak Smog Window:</span><strong>06:00 – 10:00 UTC</strong></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card full-chart-card">
+                    <h3 class="card-title">Extended 72-Hour Trajectory Profile</h3>
+                    <div style="height: 280px; position: relative;">
+                        <canvas id="extendedForecastChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- TAB 3: ANALYSES -->
+        <main id="tab-analyses" class="tab-pane">
+            <div class="tab-inner">
+                <div class="section-title-wrap">
+                    <h2>Exploratory Data Analysis & Diurnal Dynamics</h2>
+                    <p>Understanding historical particulate rhythms, traffic-induced morning smog, and weather covariate correlations.</p>
+                </div>
+                <div class="analysis-split-grid">
+                    <div class="card">
+                        <h3 class="card-title">Diurnal Smog Profile (24-Hour Cycle)</h3>
+                        <p class="card-subtitle">Average hourly pollution buildup showing morning rush and night inversions</p>
+                        <div style="height: 260px; position: relative; margin-top: 10px;">
+                            <canvas id="diurnalChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Pollutant Correlation Matrix</h3>
+                        <p class="card-subtitle">Pearson correlation coefficients among key covariates</p>
+                        <div class="correlation-table-wrap">
+                            <table class="corr-table">
+                                <thead>
+                                    <tr>
+                                        <th>Covariate</th>
+                                        <th>AQI</th>
+                                        <th>PM2.5</th>
+                                        <th>Wind</th>
+                                        <th>Humidity</th>
+                                        <th>Temp</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td><strong>AQI</strong></td><td class="c-high">1.00</td><td class="c-high">0.96</td><td class="c-neg">-0.48</td><td class="c-med">0.38</td><td class="c-low">0.14</td></tr>
+                                    <tr><td><strong>PM2.5</strong></td><td class="c-high">0.96</td><td class="c-high">1.00</td><td class="c-neg">-0.52</td><td class="c-med">0.42</td><td class="c-low">0.11</td></tr>
+                                    <tr><td><strong>Wind</strong></td><td class="c-neg">-0.48</td><td class="c-neg">-0.52</td><td class="c-high">1.00</td><td class="c-neg">-0.35</td><td class="c-med">0.28</td></tr>
+                                    <tr><td><strong>Humidity</strong></td><td class="c-med">0.38</td><td class="c-med">0.42</td><td class="c-neg">-0.35</td><td class="c-high">1.00</td><td class="c-neg">-0.41</td></tr>
+                                    <tr><td><strong>Temp</strong></td><td class="c-low">0.14</td><td class="c-low">0.11</td><td class="c-med">0.28</td><td class="c-neg">-0.41</td><td class="c-high">1.00</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- TAB 4: REPORTS -->
+        <main id="tab-reports" class="tab-pane">
+            <div class="tab-inner">
+                <div class="section-title-wrap">
+                    <h2>Air Quality Assessment & Public Health Report</h2>
+                    <p>Official synthesized advisory in accordance with Pakistan Environmental Protection Agency (Pak-EPA) and WHO standards.</p>
+                </div>
+                <div class="report-container card">
+                    <div class="report-header">
+                        <div>
+                            <span class="report-badge">SYNTHESIZED EVALUATION</span>
+                            <h3 id="reportTitle" style="margin-top: 6px; font-size: 1.3rem;">Islamabad Capital Territory Air Bulletin</h3>
+                            <p class="card-subtitle" id="reportDate">Effective Window: Today • Real-Time Satellite & Physical Ground Telemetry</p>
+                        </div>
+                        <button class="action-btn" onclick="window.print()">🖨️ Export PDF / Print</button>
+                    </div>
+
+                    <div class="report-body">
+                        <div class="report-section">
+                            <h4>1. Executive Air Status</h4>
+                            <p id="reportSummary">
+                                The current Air Quality Index for Islamabad stands at <strong>61 AQI (Moderate)</strong>. The primary atmospheric driver is <strong>PM2.5 particulates (61 µg/m³)</strong>. Air quality is acceptable for the general public, but individuals with pre-existing cardiopulmonary conditions should moderate prolonged exertion.
+                            </p>
+                        </div>
+
+                        <div class="report-section">
+                            <h4>2. Actionable Health Recommendations</h4>
+                            <div class="advisory-grid">
+                                <div class="adv-card">
+                                    <div class="adv-icon">😷</div>
+                                    <div class="adv-content">
+                                        <strong>Respiratory Protection:</strong>
+                                        <p id="advMask">Wear an N95/KN95 respirator if engaging in outdoor travel during morning smog hours.</p>
+                                    </div>
+                                </div>
+                                <div class="adv-card">
+                                    <div class="adv-icon">🏃</div>
+                                    <div class="adv-content">
+                                        <strong>Physical Exertion:</strong>
+                                        <p id="advSport">Sensitive individuals should shift intense running or cardio indoors until afternoon dispersion.</p>
+                                    </div>
+                                </div>
+                                <div class="adv-card">
+                                    <div class="adv-icon">🏠</div>
+                                    <div class="adv-content">
+                                        <strong>Indoor Air Quality:</strong>
+                                        <p id="advHome">Keep windows closed during early morning temperature inversions. Run HEPA air filters where accessible.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="report-section">
+                            <h4>3. Sensor & Ground Station Integrity</h4>
+                            <p>Telemetry stream connected to nearest active station (Pak-EPA / Sector H-8). Sensor calibration cross-verified with OpenWeather atmospheric boundary layer data.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- TAB 5: SETTINGS -->
+        <main id="tab-settings" class="tab-pane">
+            <div class="tab-inner">
+                <div class="section-title-wrap">
+                    <h2>Configuration & Operating Parameters</h2>
+                    <p>Manage model operational thresholds, alert levels, and API telemetry ingestion settings.</p>
+                </div>
+                <div class="settings-grid">
+                    <div class="card">
+                        <h3 class="card-title">Air Quality Index Standard</h3>
+                        <p class="card-subtitle">Choose the threshold calculation framework</p>
+                        <div class="setting-item" style="margin-top: 14px;">
+                            <label class="setting-label">Standard Specification:</label>
+                            <select class="city-dropdown" style="background: rgba(255,255,255,0.06); padding: 8px 14px; width: 100%;">
+                                <option>US-EPA Standard (0 - 500 Index) [Active]</option>
+                                <option>WHO Guidelines (24h Mean Bounds)</option>
+                                <option>Pak-EPA National Environmental Quality Standards (NEQS)</option>
+                            </select>
+                        </div>
+                        <div class="setting-item" style="margin-top: 14px;">
+                            <label class="setting-label">Hazard Alert Threshold (AQI):</label>
+                            <input type="number" class="city-dropdown" value="150" style="background: rgba(255,255,255,0.06); padding: 8px 14px; width: 100%;">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">Model Serving & Ingestion Pipeline</h3>
+                        <p class="card-subtitle">MLOps components status</p>
+                        <div class="sys-status-list" style="margin-top: 14px;">
+                            <div class="sys-status-row"><span>Active Champion Model:</span><strong style="color: #38bdf8;">Random Forest Regressor (R²: 0.88)</strong></div>
+                            <div class="sys-status-row"><span>Backup Deep Network:</span><strong style="color: #cbd5e1;">TensorFlow 2-Layer DNN (R²: 0.85)</strong></div>
+                            <div class="sys-status-row"><span>Baseline Model:</span><strong style="color: #94a3b8;">Ridge Regression (R²: 0.79)</strong></div>
+                            <div class="sys-status-row"><span>Ingestion Frequency:</span><strong style="color: #10b981;">Hourly Polling (Active)</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
