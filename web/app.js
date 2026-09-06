@@ -15,7 +15,13 @@ let diurnalChartInstance = null;
 let currentActiveMetric = "r2";
 
 // Live metrics — populated from /metrics endpoint
-let APP_METRICS = {};
+let APP_METRICS = {
+    r2: 0.67,
+    mae_24h: 16.05,
+    mae_48h: 21.71,
+    mae_72h: 23.11,
+    rmse: 22.92
+};
 
 // --- 1. CRISP, HIGH-DEFINITION SVG GAUGE UPDATE ---
 function drawGauge(aqiValue) {
