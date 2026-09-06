@@ -61,6 +61,12 @@ class FeatureStoreWriter:
             cities_in_batch
         )
 
+        # Hopsworks Avro schema requires None for missing string values, not Pandas float NaN
+        # We explicitly fill numeric columns with 0.0 in feature_engineering, so any remaining NaNs 
+        # are exclusively in string columns.
+        import numpy as np
+        df = df.replace({np.nan: None})
+
         # Always use insert() for Python engine! save() is for Spark and causes time_travel errors.
         fg.insert(df, write_options={"wait_for_job": False})
 
