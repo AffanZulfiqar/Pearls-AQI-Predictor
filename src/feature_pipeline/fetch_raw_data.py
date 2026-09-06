@@ -39,6 +39,7 @@ def fetch_for_city(
         "timestamp": timestamp,
         "latitude": lat,
         "longitude": lon,
+        "data_source_type": "real",
         **aqi_data,
         **weather_data
     }
