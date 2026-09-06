@@ -6,13 +6,13 @@ pandas<2.2.0
 numpy<2.0.0
 
 # Feature Store
-hopsworks==3.4.4 
+hopsworks==3.4.4
 
 # APIs & Web
 requests==2.31.0
-flask==3.0.2
+flask<3.0
 flask-cors==4.0.0
-streamlit==1.32.2
+streamlit
 plotly>=5.18.0
 
 # Utilities
