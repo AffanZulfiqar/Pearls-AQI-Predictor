@@ -59,11 +59,14 @@ def main():
             df_featured = compute_features(df_combined)
 
             # 4. Extract just the new row to write
-            df_to_write = df_featured[df_featured["timestamp"] == current_time]
+            # The timestamp in df_featured is timezone-naive (UTC) as required by Hopsworks, 
+            # so we must strip the timezone from current_time before comparing.
+            current_time_naive = current_time.replace(tzinfo=None)
+            df_to_write = df_featured[df_featured["timestamp"] == current_time_naive]
 
             if df_to_write.empty:
                 raise RuntimeError(
-                    f"Feature engineering produced no row for timestamp={current_time} city={city_id}"
+                    f"Feature engineering produced no row for timestamp={current_time_naive} city={city_id}"
                 )
 
             # 5. Write to Feature Store (raises on failure)
