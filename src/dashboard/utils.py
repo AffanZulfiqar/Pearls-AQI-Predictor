@@ -90,6 +90,8 @@ def get_dashboard_payload():
                 is_live = True
                 source = "LIVE FEATURE STORE (HOPSWORKS)"
         except Exception as e:
+            import streamlit as st
+            st.error(f"Hopsworks connection error: {e}")
             logger.info(f"Hopsworks connection skipped or unavailable: {e}")
             full_df = None
 
