@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 class FeatureStoreWriter:
     def __init__(self):
         self.project = hopsworks.login(
-            host="app.hopsworks.ai",
             project=settings.HOPSWORKS_PROJECT_NAME,
             api_key_value=settings.HOPSWORKS_API_KEY
         )
