@@ -15,13 +15,16 @@ class FeatureStoreWriter:
 
     def get_or_create_feature_group(self):
         try:
-            return self.fs.get_feature_group(
+            fg = self.fs.get_feature_group(
                 name=settings.FEATURE_GROUP_NAME,
                 version=settings.FEATURE_GROUP_VERSION
             )
+            if fg is None:
+                raise ValueError("Feature group not found (returned None)")
+            return fg, False
         except Exception as e:
             logger.info(f"Feature group not found, creating it: {e}")
-            return self.fs.create_feature_group(
+            fg = self.fs.create_feature_group(
                 name=settings.FEATURE_GROUP_NAME,
                 version=settings.FEATURE_GROUP_VERSION,
                 description="AQI and weather features",
@@ -29,12 +32,13 @@ class FeatureStoreWriter:
                 event_time="timestamp",
                 online_enabled=True # Needed for inference
             )
+            return fg, True
 
     def write_features(self, df: pd.DataFrame):
         """
         Writes the dataframe to the Hopsworks feature group.
         """
-        fg = self.get_or_create_feature_group()
+        fg, is_new = self.get_or_create_feature_group()
         
         # Hopsworks expects timestamp columns to be timezone-naive or properly formatted
         # Ensure timestamp is datetime
@@ -47,7 +51,10 @@ class FeatureStoreWriter:
 
         # Write to feature store (upsert by default)
         logger.info(f"Writing {len(df)} rows to feature store...")
-        fg.insert(df, write_options={"wait_for_job": False})
+        if is_new:
+            fg.save(df)
+        else:
+            fg.insert(df, write_options={"wait_for_job": False})
         logger.info("Successfully initiated write to feature store.")
         
     def get_recent_history(self, city_id: str, hours: int = 48) -> pd.DataFrame:
