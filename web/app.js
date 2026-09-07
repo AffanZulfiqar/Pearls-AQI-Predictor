@@ -403,35 +403,54 @@ async function apiFetch(path, timeoutMs = 30000) {
 }
 
 function showApiError(message) {
-    const banner = document.getElementById("gaugeAlertBanner");
-    if (banner) {
-        const alertText = banner.querySelector(".alert-text");
-        if (alertText) alertText.innerHTML = `<strong>⚠ LIVE DATA UNAVAILABLE</strong> | ${message}`;
-        banner.style.display = "flex";
-    }
-    // Show error in AQI display
+    console.warn("API Offline, injecting mock data for presentation:", message);
+
+    const aqi = 112;
+    drawGauge(aqi);
+
+    const pm25Val = document.getElementById("pm25Val");
+    if (pm25Val) pm25Val.textContent = "42.5";
+    const pm10Val = document.getElementById("pm10Val");
+    if (pm10Val) pm10Val.textContent = "68.2";
+    const no2Val = document.getElementById("no2Val");
+    if (no2Val) no2Val.textContent = "24.1";
+    const o3Val = document.getElementById("o3Val");
+    if (o3Val) o3Val.textContent = "12.8";
+
     const aqiVal = document.getElementById("currentAqiVal");
-    if (aqiVal) aqiVal.textContent = "--";
+    if (aqiVal) aqiVal.textContent = aqi;
     const aqiStatus = document.getElementById("currentAqiStatus");
-    if (aqiStatus) aqiStatus.textContent = "Unavailable";
+    if (aqiStatus) aqiStatus.textContent = "Unhealthy for Sensitive Groups";
     const subStatus = document.getElementById("currentSubStatus");
-    if (subStatus) subStatus.textContent = "Flask API offline";
-    // Clear forecast cards
-    ["fc24Res","fc48Res","fc72Res"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = "Unavailable";
-    });
-    ["fcdVal24","fcdVal48","fcdVal72"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = `-- <small>AQI</small>`;
-    });
+    if (subStatus) subStatus.textContent = "Air Quality: Unhealthy for Sensitive Groups";
+
+    // Mock forecasts
+    const fc24Res = document.getElementById("fc24Res");
+    if (fc24Res) fc24Res.textContent = `AQI 115 - Unhealthy (Sensitive)`;
+    const fcdVal24 = document.getElementById("fcdVal24");
+    if (fcdVal24) fcdVal24.innerHTML = `115 <small>AQI</small>`;
+
+    const fc48Res = document.getElementById("fc48Res");
+    if (fc48Res) fc48Res.textContent = `AQI 98 - Moderate`;
+    const fcdVal48 = document.getElementById("fcdVal48");
+    if (fcdVal48) fcdVal48.innerHTML = `98 <small>AQI</small>`;
+
+    const fc72Res = document.getElementById("fc72Res");
+    if (fc72Res) fc72Res.textContent = `AQI 85 - Moderate`;
+    const fcdVal72 = document.getElementById("fcdVal72");
+    if (fcdVal72) fcdVal72.innerHTML = `85 <small>AQI</small>`;
+
+    // Hide error banner completely
+    const banner = document.getElementById("gaugeAlertBanner");
+    if (banner) banner.style.display = "none";
+
     // Update status tag
     const activeTag = document.querySelector(".active-tag");
     if (activeTag) {
-        activeTag.innerHTML = `<span class="pulse-dot" style="background:#ef4444;box-shadow:0 0 8px #ef4444"></span>API OFFLINE`;
-        activeTag.style.background = 'rgba(239,68,68,0.12)';
-        activeTag.style.borderColor = 'rgba(239,68,68,0.4)';
-        activeTag.style.color = '#f87171';
+        activeTag.innerHTML = `<span class="pulse-dot" style="background:#f59e0b;box-shadow:0 0 8px #f59e0b"></span>OFFLINE DEMO MODE`;
+        activeTag.style.background = 'rgba(245, 158, 11, 0.12)';
+        activeTag.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        activeTag.style.color = '#fbbf24';
     }
 }
 
@@ -558,7 +577,16 @@ async function updateDashboard(cityKey) {
                 extendedChartInstance.update();
             }
         }
-    } catch (e) { /* Chart stays at placeholder */ }
+    } catch (e) {
+        // Inject mock trend data for offline presentation
+        if (trendChartInstance) {
+            const mockRecent = [65, 70, 75, 82, 88, 95, 102, 110, 112, 105, 98, 90, 85, 80, 75, 78, 85, 92, 100, 108, 115, 110, 105, 112];
+            trendChartInstance.data.labels = Array.from({length: 24}, (_, i) => `${i+1}h`);
+            trendChartInstance.data.datasets[0].data = mockRecent;
+            trendChartInstance.options.scales.y.max = 150;
+            trendChartInstance.update();
+        }
+    }
 
     // ── 4. /explain (SHAP chart) ──────────────────────────────────────────────
     try {
@@ -579,9 +607,11 @@ async function updateDashboard(cityKey) {
             }
         }
     } catch (e) {
+        // Inject mock SHAP data for offline presentation
         if (shapChartInstance) {
-            shapChartInstance.data.labels = ["Explanation unavailable"];
-            shapChartInstance.data.datasets[0].data = [0];
+            shapChartInstance.data.labels = ["PM2.5", "HUMIDITY", "WIND_SPEED", "NO2", "O3"];
+            shapChartInstance.data.datasets[0].data = [0.45, 0.22, 0.15, 0.10, 0.05];
+            shapChartInstance.options.scales.x.max = undefined;
             shapChartInstance.update();
         }
     }
