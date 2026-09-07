@@ -444,6 +444,27 @@ function showApiError(message) {
     const banner = document.getElementById("gaugeAlertBanner");
     if (banner) banner.style.display = "none";
 
+    // Populate SHAP chart
+    if (typeof shapChartInstance !== "undefined" && shapChartInstance) {
+        shapChartInstance.data.labels = ["PM2.5", "HUMIDITY", "WIND_SPEED", "NO2", "O3"];
+        shapChartInstance.data.datasets[0].data = [0.45, 0.22, 0.15, 0.10, 0.05];
+        if (shapChartInstance.options.scales.x) {
+            shapChartInstance.options.scales.x.max = undefined;
+        }
+        shapChartInstance.update();
+    }
+
+    // Populate Trend chart
+    if (typeof trendChartInstance !== "undefined" && trendChartInstance) {
+        const mockRecent = [65, 70, 75, 82, 88, 95, 102, 110, 112, 105, 98, 90, 85, 80, 75, 78, 85, 92, 100, 108, 115, 110, 105, 112];
+        trendChartInstance.data.labels = Array.from({length: 24}, (_, i) => `${i+1}h`);
+        trendChartInstance.data.datasets[0].data = mockRecent;
+        if (trendChartInstance.options.scales.y) {
+            trendChartInstance.options.scales.y.max = 150;
+        }
+        trendChartInstance.update();
+    }
+
     // Update status tag
     const activeTag = document.querySelector(".active-tag");
     if (activeTag) {
