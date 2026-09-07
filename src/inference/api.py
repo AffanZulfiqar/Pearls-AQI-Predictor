@@ -31,8 +31,15 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# Initialise predictor once at startup
-predictor = Predictor()
+# Lazy-load predictor to avoid DNS race conditions during server boot
+predictor = None
+
+@app.before_request
+def initialize_predictor():
+    global predictor
+    if predictor is None:
+        logger.info("Lazy-loading Predictor to allow network to boot...")
+        predictor = Predictor()
 
 
 # ── /health ────────────────────────────────────────────────────────────────────
