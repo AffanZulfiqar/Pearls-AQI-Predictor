@@ -8,35 +8,29 @@ Built with Hopsworks Feature Store, GitHub Actions scheduled pipelines, Scikit-l
 
 ## 🏛️ System Architecture
 
-```text
-                      ┌─────────────────────────┐
-                      │   AQICN / OpenWeather   │
-                      │        APIs             │
-                      └────────────┬────────────┘
-                                   │ hourly (GitHub Actions cron)
-                                   ▼
-                      ┌─────────────────────────┐
-                      │   Feature Pipeline      │
-                      │  (fetch → engineer →    │
-                      │   write to Feature Store)
-                      └────────────┬────────────┘
-                                   ▼
-                      ┌─────────────────────────┐
-                      │ Hopsworks Feature Store │
-                      │  (aqi_features FG)      │
-                      └───────┬─────────┬───────┘
-                 daily (cron) │         │ on-demand (serverless)
-                               ▼         ▼
-               ┌───────────────────┐   ┌────────────────────────┐
-               │ Training Pipeline │   │ Inference & UI Layer   │
-               │ (3 models, SHAP,  │   │ (Streamlit App +       │
-               │  model registry)  │──▶│  Flask REST API)       │
-               └────────┬──────────┘   └────────────────────────┘
-                        ▼
-               ┌───────────────────┐
-               │ Hopsworks Model   │
-               │ Registry          │
-               └───────────────────┘
+```mermaid
+graph TD
+    %% Styling
+    classDef api fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a,rx:5px,ry:5px;
+    classDef pipeline fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a,rx:10px,ry:10px;
+    classDef hopsworks fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#14532d,rx:10px,ry:10px;
+    classDef ui fill:#fefce8,stroke:#eab308,stroke-width:2px,color:#713f12,rx:10px,ry:10px;
+
+    %% Nodes
+    A["📡 AQICN & OpenWeather APIs<br/>(Raw Telemetry)"]:::api
+    B["⚙️ Feature Pipeline<br/>(Fetch → Engineer → Write)"]:::pipeline
+    C[("🗄️ Hopsworks Feature Store<br/>(aqi_features FG)")]:::hopsworks
+    D["🧠 Training Pipeline<br/>(RF, Ridge, TF + SHAP)"]:::pipeline
+    E[("📦 Hopsworks Model Registry<br/>(Versioned Artifacts)")]:::hopsworks
+    F["🖥️ Inference & UI Layer<br/>(Streamlit + Flask API)"]:::ui
+
+    %% Edges
+    A -- "Hourly trigger<br>(GitHub Actions)" --> B
+    B -- "Upsert features" --> C
+    C -- "Daily trigger<br>(GitHub Actions)" --> D
+    D -- "Register best model" --> E
+    C -. "Fetch latest row<br>(On-demand)" .-> F
+    E -. "Load model artifact<br>(On-demand)" .-> F
 ```
 
 ---
