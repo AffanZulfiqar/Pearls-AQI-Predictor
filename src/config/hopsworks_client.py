@@ -26,8 +26,7 @@ def get_project():
     try:
         _project = hopsworks.login(
             project=settings.HOPSWORKS_PROJECT_NAME,
-            api_key_value=settings.HOPSWORKS_API_KEY,
-            engine="python"
+            api_key_value=settings.HOPSWORKS_API_KEY
         )
         logger.info("Hopsworks connection established: project=%s", settings.HOPSWORKS_PROJECT_NAME)
         return _project
