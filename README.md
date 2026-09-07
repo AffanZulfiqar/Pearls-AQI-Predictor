@@ -21,7 +21,7 @@ graph TD
     B["⚙️ Feature Pipeline<br/>(Fetch → Engineer → Write)"]:::pipeline
     C[("🗄️ Hopsworks Feature Store<br/>(aqi_features FG)")]:::hopsworks
     D["🧠 Training Pipeline<br/>(RF, Ridge, TF + SHAP)"]:::pipeline
-    E[("📦 Hopsworks Model Registry<br/>(Versioned Artifacts)")]:::hopsworks
+    E[("📦 Hopsworks Model Registry<br/>(Trained Models)")]:::hopsworks
     F["🖥️ Inference & UI Layer<br/>(Streamlit + Flask API)"]:::ui
 
     %% Edges
@@ -30,7 +30,7 @@ graph TD
     C -- "Daily trigger<br>(GitHub Actions)" --> D
     D -- "Register best model" --> E
     C -. "Fetch latest row<br>(On-demand)" .-> F
-    E -. "Load model artifact<br>(On-demand)" .-> F
+    E -. "Load model<br>(On-demand)" .-> F
 ```
 
 ---
