@@ -36,6 +36,10 @@ predictor = None
 
 @app.before_request
 def initialize_predictor():
+    # Bypass heavy initialization for healthchecks and static routes
+    if request.path in ["/", "/health", "/status", "/metrics"]:
+        return
+
     global predictor
     if predictor is None:
         logger.info("Lazy-loading Predictor to allow network to boot...")
@@ -43,6 +47,10 @@ def initialize_predictor():
 
 
 # ── /health ────────────────────────────────────────────────────────────────────
+
+@app.route("/", methods=["GET"])
+def root_health():
+    return jsonify({"status": "alive", "message": "Pearls AQI API is running"}), 200
 
 @app.route("/health", methods=["GET"])
 def health():
@@ -54,6 +62,9 @@ def health():
 @app.route("/status", methods=["GET"])
 def status():
     """Detailed system status — useful for debugging deployment."""
+    if predictor is None:
+        return jsonify({"status": "starting up", "message": "Predictor is lazy-loading on first request"}), 200
+
     models_loaded = {h: (h in predictor.models) for h in ["24h", "48h", "72h"]}
     data_sources  = {
         h: predictor.model_metadata.get(h, {}).get("data_source", "unknown")
@@ -238,10 +249,12 @@ def metrics():
             data = json.load(f)
 
         # Also read data_source from model metadata if available
-        data_source_info = {
-            h: predictor.model_metadata.get(h, {}).get("data_source", "unknown")
-            for h in ["24h", "48h", "72h"]
-        }
+        data_source_info = {}
+        if predictor is not None:
+            data_source_info = {
+                h: predictor.model_metadata.get(h, {}).get("data_source", "unknown")
+                for h in ["24h", "48h", "72h"]
+            }
 
         return jsonify({
             "metrics":      data,
