@@ -405,40 +405,40 @@ async function apiFetch(path, timeoutMs = 30000) {
 function showApiError(message) {
     console.warn("API Offline, injecting mock data for presentation:", message);
 
-    const aqi = 112;
+    const aqi = 61;
     drawGauge(aqi);
 
     const pm25Val = document.getElementById("pm25Val");
-    if (pm25Val) pm25Val.textContent = "42.5";
+    if (pm25Val) pm25Val.textContent = "16.5";
     const pm10Val = document.getElementById("pm10Val");
-    if (pm10Val) pm10Val.textContent = "68.2";
+    if (pm10Val) pm10Val.textContent = "28.2";
     const no2Val = document.getElementById("no2Val");
-    if (no2Val) no2Val.textContent = "24.1";
+    if (no2Val) no2Val.textContent = "12.1";
     const o3Val = document.getElementById("o3Val");
-    if (o3Val) o3Val.textContent = "12.8";
+    if (o3Val) o3Val.textContent = "10.8";
 
     const aqiVal = document.getElementById("currentAqiVal");
     if (aqiVal) aqiVal.textContent = aqi;
     const aqiStatus = document.getElementById("currentAqiStatus");
-    if (aqiStatus) aqiStatus.textContent = "Unhealthy for Sensitive Groups";
+    if (aqiStatus) aqiStatus.textContent = "Moderate";
     const subStatus = document.getElementById("currentSubStatus");
-    if (subStatus) subStatus.textContent = "Air Quality: Unhealthy for Sensitive Groups";
+    if (subStatus) subStatus.textContent = "Air Quality: Moderate";
 
     // Mock forecasts
     const fc24Res = document.getElementById("fc24Res");
-    if (fc24Res) fc24Res.textContent = `AQI 115 - Unhealthy (Sensitive)`;
+    if (fc24Res) fc24Res.textContent = `AQI 58 - Moderate`;
     const fcdVal24 = document.getElementById("fcdVal24");
-    if (fcdVal24) fcdVal24.innerHTML = `115 <small>AQI</small>`;
+    if (fcdVal24) fcdVal24.innerHTML = `58 <small>AQI</small>`;
 
     const fc48Res = document.getElementById("fc48Res");
-    if (fc48Res) fc48Res.textContent = `AQI 98 - Moderate`;
+    if (fc48Res) fc48Res.textContent = `AQI 66 - Moderate`;
     const fcdVal48 = document.getElementById("fcdVal48");
-    if (fcdVal48) fcdVal48.innerHTML = `98 <small>AQI</small>`;
+    if (fcdVal48) fcdVal48.innerHTML = `66 <small>AQI</small>`;
 
     const fc72Res = document.getElementById("fc72Res");
-    if (fc72Res) fc72Res.textContent = `AQI 85 - Moderate`;
+    if (fc72Res) fc72Res.textContent = `AQI 74 - Moderate`;
     const fcdVal72 = document.getElementById("fcdVal72");
-    if (fcdVal72) fcdVal72.innerHTML = `85 <small>AQI</small>`;
+    if (fcdVal72) fcdVal72.innerHTML = `74 <small>AQI</small>`;
 
     // Hide error banner completely
     const banner = document.getElementById("gaugeAlertBanner");
@@ -456,11 +456,11 @@ function showApiError(message) {
 
     // Populate Trend chart
     if (typeof trendChartInstance !== "undefined" && trendChartInstance) {
-        const mockRecent = [65, 70, 75, 82, 88, 95, 102, 110, 112, 105, 98, 90, 85, 80, 75, 78, 85, 92, 100, 108, 115, 110, 105, 112];
+        const mockRecent = [45, 48, 52, 55, 60, 65, 70, 75, 72, 68, 65, 62, 58, 55, 50, 48, 50, 55, 60, 65, 70, 65, 62, 61];
         trendChartInstance.data.labels = Array.from({length: 24}, (_, i) => `${i+1}h`);
         trendChartInstance.data.datasets[0].data = mockRecent;
         if (trendChartInstance.options.scales.y) {
-            trendChartInstance.options.scales.y.max = 150;
+            trendChartInstance.options.scales.y.max = 120;
         }
         trendChartInstance.update();
     }
@@ -601,10 +601,10 @@ async function updateDashboard(cityKey) {
     } catch (e) {
         // Inject mock trend data for offline presentation
         if (trendChartInstance) {
-            const mockRecent = [65, 70, 75, 82, 88, 95, 102, 110, 112, 105, 98, 90, 85, 80, 75, 78, 85, 92, 100, 108, 115, 110, 105, 112];
+            const mockRecent = [45, 48, 52, 55, 60, 65, 70, 75, 72, 68, 65, 62, 58, 55, 50, 48, 50, 55, 60, 65, 70, 65, 62, 61];
             trendChartInstance.data.labels = Array.from({length: 24}, (_, i) => `${i+1}h`);
             trendChartInstance.data.datasets[0].data = mockRecent;
-            trendChartInstance.options.scales.y.max = 150;
+            trendChartInstance.options.scales.y.max = 120;
             trendChartInstance.update();
         }
     }
