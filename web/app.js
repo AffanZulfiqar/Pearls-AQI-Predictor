@@ -327,7 +327,7 @@ function initExtendedCharts() {
                 labels: hours,
                 datasets: [{
                     label: "Predicted AQI",
-                    data: CITY_DATABASE.islamabad.extended,
+                    data: [45,46,47,48,50,55,60,65,70,68,65,60,55,50,48],
                     borderColor: "#38bdf8",
                     backgroundColor: "rgba(56, 189, 248, 0.15)",
                     fill: true,
@@ -388,7 +388,7 @@ function initExtendedCharts() {
 
 // ── API helpers ────────────────────────────────────────────────────────────────
 
-async function apiFetch(path, timeoutMs = 8000) {
+async function apiFetch(path, timeoutMs = 30000) {
     const url = `${FLASK_API_URL}${path}`;
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), timeoutMs);
@@ -436,7 +436,7 @@ function showApiError(message) {
 }
 
 // ── City name map ──────────────────────────────────────────────────────────────
-const CITY_NAMES = { islamabad: "Islamabad", karachi: "Karachi", lahore: "Lahore" };
+const CITY_NAMES = { islamabad: "Islamabad" };
 
 // ── Main dashboard update — ALL data from Flask API ───────────────────────────
 async function updateDashboard(cityKey) {
@@ -562,7 +562,7 @@ async function updateDashboard(cityKey) {
 
     // ── 4. /explain (SHAP chart) ──────────────────────────────────────────────
     try {
-        const res = await apiFetch(`/explain?city=${cityKey}`, 15000);
+        const res = await apiFetch(`/explain?city=${cityKey}`, 45000); // 45s timeout for SHAP
         if (res.ok) {
             const d = await res.json();
             const exp24 = (d.explanations || {})["24h"] || [];

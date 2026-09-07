@@ -2,71 +2,55 @@
 
 A 100% serverless, end-to-end machine learning system that forecasts a city's Air Quality Index (AQI) for the **next 3 days** (24h, 48h, 72h horizons). 
 
-Built with Hopsworks Feature Store, GitHub Actions scheduled pipelines, Scikit-learn, TensorFlow, Flask API, and an interactive dual-view Streamlit dashboard.
+Built with Hopsworks Feature Store, GitHub Actions scheduled pipelines, Scikit-learn, TensorFlow, Flask API, and an interactive Streamlit dashboard.
 
 ---
 
 ## 🏛️ System Architecture
 
-```
+```text
                       ┌─────────────────────────┐
-                      │   AQICN / OpenWeather    │
-                      │        APIs              │
-                      └────────────┬─────────────┘
+                      │   AQICN / OpenWeather   │
+                      │        APIs             │
+                      └────────────┬────────────┘
                                    │ hourly (GitHub Actions cron)
                                    ▼
                       ┌─────────────────────────┐
-                      │   Feature Pipeline        │
-                      │  (fetch → engineer →      │
-                      │   write to Feature Store) │
-                      └────────────┬─────────────┘
+                      │   Feature Pipeline      │
+                      │  (fetch → engineer →    │
+                      │   write to Feature Store)
+                      └────────────┬────────────┘
                                    ▼
                       ┌─────────────────────────┐
-                      │   Hopsworks Feature Store │
-                      │  (aqi_features FG)        │
-                      └───────┬─────────┬─────────┘
+                      │ Hopsworks Feature Store │
+                      │  (aqi_features FG)      │
+                      └───────┬─────────┬───────┘
                  daily (cron) │         │ on-demand (serverless)
                                ▼         ▼
                ┌───────────────────┐   ┌────────────────────────┐
-               │ Training Pipeline  │   │ Inference & UI Layer   │
-               │ (3 models, SHAP,   │   │ (Streamlit App +       │
-               │  model registry)   │──▶│  Flask REST API)       │
-               └────────┬───────────┘   └────────────────────────┘
+               │ Training Pipeline │   │ Inference & UI Layer   │
+               │ (3 models, SHAP,  │   │ (Streamlit App +       │
+               │  model registry)  │──▶│  Flask REST API)       │
+               └────────┬──────────┘   └────────────────────────┘
                         ▼
                ┌───────────────────┐
-               │ Hopsworks Model    │
-               │ Registry           │
+               │ Hopsworks Model   │
+               │ Registry          │
                └───────────────────┘
 ```
 
 ---
 
-## 🖥️ Dashboard Architecture & Dual-View Routing
+## 🖥️ Enterprise Dashboard Architecture
 
-The application delivers an enterprise-grade visualization layer designed for both executive presentation and developer modularity:
+The application delivers an enterprise-grade visualization layer designed for executive presentation and real-time monitoring.
 
-### 1. Executive Glassmorphism Dashboard (Default View)
-- **Location:** [`web/`](file:///d:/Pearls%20aqi%20predictor/web/) (`index.html`, `style.css`, `app.js`) rendered via Streamlit's component engine (`streamlit.components.v1.html`).
-- **Features:** 
-  - Dynamic mathematical SVG circular gauge with responsive color-shifting (Good, Moderate, Sensitive, Unhealthy).
-  - EPA color-coded 24-hour diurnal trend line with automatic headroom calculation.
-  - Live pollutant telemetry matrix (PM2.5, PM10, NO₂, O₃) with mini sparklines.
-  - Interactive SHAP feature importance rankings.
-  - Model Performance Championship benchmarks with clickable interactive metric switchers (R² Parity Fit, MAE Horizon Bars, RMSE Residual Distribution).
-  - Multi-city switcher: **Islamabad**, **Karachi**, and **Lahore**.
-  - WHO & EPA Health Advisories with PDF/print bulletin generation.
-- **Data Ingestion:** 
-  - On **Streamlit Community Cloud**, Python loads live telemetry and model predictions directly from Hopsworks and injects them server-side into `window.__SERVER_DATA__`.
-  - When running locally alongside Flask, client-side asynchronous fetches query `http://127.0.0.1:5000/predict` and `/explain`.
-  - Truth-in-labeling status badge dynamically reports `LIVE FEATURE STORE`, `LIVE FLASK INFERENCE`, or `OFFLINE BENCHMARK`.
-
-### 2. Modular Streamlit Component Inspector (`?view=modular`)
-- **Route:** Access by appending `?view=modular` to the dashboard URL (e.g. `http://localhost:8501/?view=modular`).
-- **Purpose:** Renders the underlying native Streamlit modular components:
-  - [`src/dashboard/components/forecast_view.py`](file:///d:/Pearls%20aqi%20predictor/src/dashboard/components/forecast_view.py): Metric cards with EPA color tags.
-  - [`src/dashboard/components/eda_view.py`](file:///d:/Pearls%20aqi%20predictor/src/dashboard/components/eda_view.py): 4 distinct Plotly charts (7-day trend, hourly diurnal curve, pollutant correlation matrix, distribution histogram).
-  - [`src/dashboard/components/shap_view.py`](file:///d:/Pearls%20aqi%20predictor/src/dashboard/components/shap_view.py): Model feature attribution visualizer.
-  - [`src/dashboard/components/alert_banner.py`](file:///d:/Pearls%20aqi%20predictor/src/dashboard/components/alert_banner.py): Hazardous AQI alert trigger.
+- **Dynamic Visuals:** Mathematical SVG circular gauge with responsive color-shifting based on standard AQI categories (Good, Moderate, Sensitive, Unhealthy).
+- **Trend Analysis:** EPA color-coded 24-hour diurnal trend line and comprehensive exploratory data analysis (EDA) charts.
+- **Live Telemetry:** Matrix of primary pollutants (PM2.5, PM10, NO₂, O₃) with real-time readings.
+- **Explainable AI:** Interactive SHAP feature importance rankings that explain exactly *why* the model predicts specific AQI values.
+- **Model Benchmarking:** Interactive metrics (R² Parity Fit, MAE Horizon Bars, RMSE Residual Distribution) evaluating the active Random Forest, Ridge, and TensorFlow models.
+- **Health Advisories:** Automated generation of WHO & EPA aligned public health advisories based on the forecasted horizon.
 
 ---
 
@@ -99,6 +83,7 @@ AQICN_API_KEY=your_aqicn_token
 OPENWEATHER_API_KEY=your_openweather_key
 HOPSWORKS_API_KEY=your_hopsworks_api_key
 HOPSWORKS_PROJECT_NAME=your_hopsworks_project
+FLASK_API_URL=http://127.0.0.1:5000
 ```
 
 - **AQICN Token:** [https://aqicn.org/data-platform/token/](https://aqicn.org/data-platform/token/)
@@ -107,9 +92,9 @@ HOPSWORKS_PROJECT_NAME=your_hopsworks_project
 
 ---
 
-## 🏃 Running Pipelines
+## 🏃 Running the MLOps Pipelines
 
-All pipelines can be executed standalone from the root directory:
+The machine learning pipelines can be executed standalone from the root directory:
 
 ```bash
 # 1. Historical Backfill (generate and store historical feature data)
@@ -126,28 +111,26 @@ python -m src.training_pipeline.run_training_pipeline
 
 ## 🌐 Serving & Dashboards
 
-### Option A: Streamlit Dashboard (Standalone / Cloud)
-```bash
-streamlit run src/dashboard/app.py
-```
-- Open **`http://localhost:8501`** for the Executive UI.
-- Open **`http://localhost:8501/?view=modular`** for the Modular Component Inspector.
-
-### Option B: Flask Inference API (Microservice)
+### Option A: Local Development
+Start the Flask API on port 5000:
 ```bash
 python -m src.inference.api
 ```
-Exposes REST endpoints on port 5000:
-- `GET /health`: Health check (`{"status": "healthy"}`)
-- `GET /predict?city=islamabad`: 3-day multi-horizon forecast & alert status
-- `GET /explain?city=islamabad`: Top SHAP feature importances
+In a separate terminal, start the Streamlit Dashboard:
+```bash
+streamlit run src/dashboard/app.py
+```
+
+### Option B: Cloud Deployment (Serverless)
+1. **API Deployment:** Use the provided `Dockerfile` to deploy the Flask API to Hugging Face Spaces, Render, or Railway.
+2. **Dashboard Deployment:** Update `FLASK_API_URL` in your configuration to point to your new cloud API, then deploy the Streamlit app to Streamlit Community Cloud.
 
 ---
 
 ## 🧪 Testing
 
-Run unit and integration test suites:
+Run the unit and integration test suites:
 ```bash
 pytest
 ```
-- Tests cover feature engineering, API client retry logic, model evaluation, and inference alerts.
+Tests comprehensively cover feature engineering, API client retry logic, model evaluation, and inference alerts.
