@@ -1,6 +1,6 @@
 # Pearls AQI Predictor
 
-[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/AffanZulfiqar/Pearls-AQI-Predictor)
+![Dashboard](dashboard.png)
 
 A 100% serverless, end-to-end machine learning system that forecasts a city's Air Quality Index (AQI) for the **next 3 days** (24h, 48h, 72h horizons). 
 
