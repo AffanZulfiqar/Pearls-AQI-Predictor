@@ -1,5 +1,7 @@
 # Pearls AQI Predictor
 
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/AffanZulfiqar/Pearls-AQI-Predictor)
+
 A 100% serverless, end-to-end machine learning system that forecasts a city's Air Quality Index (AQI) for the **next 3 days** (24h, 48h, 72h horizons). 
 
 Built with Hopsworks Feature Store, GitHub Actions scheduled pipelines, Scikit-learn, TensorFlow, Flask API, and an interactive Streamlit dashboard.
@@ -54,8 +56,8 @@ The application delivers an enterprise-grade visualization layer designed for ex
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/pearls-aqi-predictor.git
-cd pearls-aqi-predictor
+git clone https://github.com/AffanZulfiqar/Pearls-AQI-Predictor.git
+cd Pearls-AQI-Predictor
 
 # Create and activate virtual environment
 python -m venv venv
